@@ -41,7 +41,7 @@ fun ScanCode(
     val lifecycleOwner = LocalLifecycleOwner.current
 
     // State to track whether a barcode has been detected
-    var qrCodeDetected by remember { mutableStateOf(false) }
+    var codeDetected by remember { mutableStateOf(false) }
 
     // State to store the bounding rectangle of the detected barcode
     var boundingRect by remember { mutableStateOf<Rect?>(null) }
@@ -61,21 +61,21 @@ fun ScanCode(
                     // Improves efficiency and reduces false positives.
                     val options = BarcodeScannerOptions.Builder()
                         .setBarcodeFormats(
-                            Barcode.FORMAT_QR_CODE,       // QR Codes
-                            Barcode.FORMAT_CODABAR,       // Codabar
-                            Barcode.FORMAT_CODE_93,       // Code 93
-                            Barcode.FORMAT_CODE_39,       // Code 39
-                            Barcode.FORMAT_CODE_128,      // Code 128
-                            Barcode.FORMAT_EAN_8,         // EAN-8
-                            Barcode.FORMAT_EAN_13,        // EAN-13
-                            Barcode.FORMAT_AZTEC          // Aztec
+                            Barcode.FORMAT_QR_CODE,       // QR Codes - marketing, contactless payments, URLs
+                            Barcode.FORMAT_CODABAR,       // Codabar - numeric encoding
+                            Barcode.FORMAT_CODE_93,       // Code 93 - alphanumeric encoding, low density
+                            Barcode.FORMAT_CODE_39,       // Code 39 - alphanumeric encoding, higher density
+                            Barcode.FORMAT_CODE_128,      // Code 128 - alphanumeric encoding, highest density
+                            Barcode.FORMAT_EAN_8,         // EAN-8 - shorter EAN code - small products
+                            Barcode.FORMAT_EAN_13,        // EAN-13 - product identification
+                            Barcode.FORMAT_AZTEC          // Aztec - large amount of data i.e. airline tickets
                         )
                         .build()
 
                     // Create the barcode scanner client with the defined options
                     val barcodeScanner = BarcodeScanning.getClient(options)
 
-                    // Use CameraX's ImageAnalysis API to analyze frames from the camera
+                    // Use CameraX's Image Analysis API to analyze frames from the camera
                     cameraController.setImageAnalysisAnalyzer(
                         ContextCompat.getMainExecutor(ctx), // Runs the analysis on the main thread
                         MlKitAnalyzer(
@@ -87,8 +87,8 @@ fun ScanCode(
                             val barcodeResults = result?.getValue(barcodeScanner)
                             if (!barcodeResults.isNullOrEmpty()) {
                                 barcode = barcodeResults.first().rawValue
-                                qrCodeDetected = true
-                                boundingRect = barcodeResults.first().boundingBox // Store the bounding box for drawing
+                                codeDetected = true
+                                boundingRect = barcodeResults.first().boundingBox // Stores bounding box coords for drawing
                             }
                         }
                     )
@@ -103,7 +103,7 @@ fun ScanCode(
         )
 
         // If a barcode has been detected, trigger callback and draw a rectangle
-        if (qrCodeDetected) {
+        if (codeDetected) {
             LaunchedEffect(Unit) {
                 // Ensure the UI has time to recompose before invoking the callback
                 delay(100)
@@ -112,7 +112,7 @@ fun ScanCode(
                 onQrCodeDetected(barcode ?: "")
             }
 
-            // Draw a rectangle around the detected barcode for visual feedback
+            // Draw a rectangle around the detected barcode for visual feedback if boundingRect != null
             boundingRect?.let { DrawRectangle(it) }
         }
     }
@@ -132,7 +132,7 @@ fun DrawRectangle(rect: Rect) {
         // Draw the rectangle around the barcode
         drawRect(
             color = Color.Red,
-            topLeft = Offset(composeRect.left, composeRect.top),
+            topLeft = Offset(composeRect.left, composeRect.top), // Offset represents xy coords in canvas
             size = Size(composeRect.width, composeRect.height),
             style = Stroke(width = 5f)
         )
